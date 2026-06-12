@@ -1,5 +1,6 @@
 """Main chat endpoint — orchestrates RAG + Gemini + session store."""
 from __future__ import annotations
+
 import uuid
 
 from fastapi import APIRouter, HTTPException
@@ -17,74 +18,171 @@ router = APIRouter()
 def _format_context(hits: list[dict]) -> str:
     if not hits:
         return ""
+
     blocks: list[str] = []
+
     for i, h in enumerate(hits, start=1):
         meta = h.get("metadata", {})
-        tag = f"[{i}] {meta.get('source','?')} (p.{meta.get('page','?')}, {meta.get('type','?')})"
-        blocks.append(f"{tag}\n{h.get('document','').strip()}")
+        tag = (
+            f"[{i}] "
+            f"{meta.get('source', '?')} "
+            f"(p.{meta.get('page', '?')}, "
+            f"{meta.get('type', '?')})"
+        )
+
+        blocks.append(
+            f"{tag}\n{h.get('document', '').strip()}"
+        )
+
     return "\n\n".join(blocks)
 
 
 @router.post("/ask", response_model=AskResponse)
 async def ask(req: AskRequest):
-    if not req.question.strip():
-        raise HTTPException(400, "Empty question")
+    try:
+        # Validate question
+        if not req.question or not req.question.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="Empty question"
+            )
 
-    # 1. embed + retrieve (priority order: notes > pdf > pyq > internal)
-    q_emb = embed_query(req.question)
-    where = {"semester": req.semester, "subject_id": req.subject_id}
+        # --------------------------------------------------
+        # 1. Embed query
+        # --------------------------------------------------
+        try:
+            q_emb = embed_query(req.question)
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Embedding error: {str(e)}"
+            )
 
-    notes = rag_query(query_embedding=q_emb, where={**where, "type": "notes"}, n_results=4)
-    pyqs = rag_query(query_embedding=q_emb, where={**where, "type": "pyq"}, n_results=3)
-    internals = rag_query(query_embedding=q_emb, where={**where, "type": "internal"}, n_results=2)
+        # --------------------------------------------------
+        # 2. Retrieve context
+        # --------------------------------------------------
+        where = {
+            "semester": req.semester,
+            "subject_id": req.subject_id,
+        }
 
-    # priority order
-    hits = notes + pyqs + internals
+        try:
+            notes = rag_query(
+                query_embedding=q_emb,
+                where={**where, "type": "notes"},
+                n_results=4,
+            )
 
-    context = _format_context(hits)
+            pyqs = rag_query(
+                query_embedding=q_emb,
+                where={**where, "type": "pyq"},
+                n_results=3,
+            )
 
-    # 2. build prompt
-    system = BASE_SYSTEM
-    user_prompt = build_prompt(
-        question=req.question,
-        context=context,
-        mode=req.mode,
-        marks=req.marks,
-        subject=req.subject_id,
-    )
+            internals = rag_query(
+                query_embedding=q_emb,
+                where={**where, "type": "internal"},
+                n_results=2,
+            )
 
-    # 3. record user message
-    store.append(req.session_id, {
-        "role": "user",
-        "content": req.question,
-        "mode": req.mode,
-        "marks": req.marks,
-    })
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Vector search error: {str(e)}"
+            )
 
-    # 4. generate answer
-    answer = await generate(system, user_prompt)
+        hits = notes + pyqs + internals
 
-    # 5. record assistant message
-    store.append(req.session_id, {
-        "role": "assistant",
-        "content": answer,
-        "sources": [h.get("metadata", {}) for h in hits],
-    })
+        context = _format_context(hits)
 
-    sources = [
-        Source(
-            source=h.get("metadata", {}).get("source", "unknown"),
-            page=h.get("metadata", {}).get("page"),
-            score=round(h.get("score", 0.0), 3),
+        # --------------------------------------------------
+        # 3. Build prompt
+        # --------------------------------------------------
+        system = BASE_SYSTEM
+
+        user_prompt = build_prompt(
+            question=req.question,
+            context=context,
+            mode=req.mode,
+            marks=req.marks,
+            subject=req.subject_id,
         )
-        for h in hits
-    ]
-    confidence = [Confidence(**c) for c in extract_confidence(answer)]
 
-    return AskResponse(
-        answer=answer,
-        sources=sources,
-        confidence=confidence,
-        session_id=req.session_id,
-        message_id=str(uuid.uuid4()),
-    )
+        # --------------------------------------------------
+        # 4. Store user message
+        # --------------------------------------------------
+        store.append(
+            req.session_id,
+            {
+                "role": "user",
+                "content": req.question,
+                "mode": req.mode,
+                "marks": req.marks,
+            },
+        )
+
+        # --------------------------------------------------
+        # 5. Generate answer
+        # --------------------------------------------------
+        try:
+            answer = await generate(system, user_prompt)
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"LLM generation failed: {str(e)}"
+            )
+
+        # --------------------------------------------------
+        # 6. Store assistant message
+        # --------------------------------------------------
+        store.append(
+            req.session_id,
+            {
+                "role": "assistant",
+                "content": answer,
+                "sources": [
+                    h.get("metadata", {})
+                    for h in hits
+                ],
+            },
+        )
+
+        # --------------------------------------------------
+        # 7. Build response
+        # --------------------------------------------------
+        sources = [
+            Source(
+                source=h.get("metadata", {}).get(
+                    "source",
+                    "unknown",
+                ),
+                page=h.get("metadata", {}).get("page"),
+                score=round(
+                    h.get("score", 0.0),
+                    3,
+                ),
+            )
+            for h in hits
+        ]
+
+        confidence = [
+            Confidence(**c)
+            for c in extract_confidence(answer)
+        ]
+
+        return AskResponse(
+            answer=answer,
+            sources=sources,
+            confidence=confidence,
+            session_id=req.session_id,
+            message_id=str(uuid.uuid4()),
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Unexpected chat error: {str(e)}"
+        )

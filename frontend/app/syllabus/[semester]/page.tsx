@@ -28,8 +28,8 @@ export default function SyllabusPage() {
     return () => clearTimeout(t);
   }, [semester, router]);
 
-  const subjects = SUBJECTS[semester as 1] ?? [];
-  const label = SEMESTER_LABELS[semester as 1] ?? `Semester ${semester}`;
+  const subjects =
+  SUBJECTS[semester as keyof typeof SUBJECTS] ?? [];  const label = SEMESTER_LABELS[semester as 1] ?? `Semester ${semester}`;
 
   return (
     <main className="relative min-h-screen px-6 py-10">

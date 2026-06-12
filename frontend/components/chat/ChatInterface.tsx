@@ -12,11 +12,12 @@ import {
   User,
   Bot,
   AlertCircle,
+  ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
 import { api, type AnswerType, type ChatMessage, type Mode, type Semester } from "@/lib/api";
 import { getOrCreateSessionId, resetSession } from "@/lib/session";
-import { SEMESTER_LABELS } from "@/lib/subjects";
+import { SEMESTER_LABELS, SEMESTER_SUBJECTS } from "@/lib/subjects";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
@@ -29,16 +30,17 @@ const MARKS: { value: AnswerType; label: string }[] = [
   { value: "20marks", label: "20 Marks" },
 ];
 
-const MODES: { value: Mode; label: string; tag: string }[] = [
-  { value: "normal", label: "Normal", tag: "N" },
-  { value: "exam_tomorrow", label: "Exam Tomorrow", tag: "ET" },
-  { value: "pyq_intelligence", label: "PYQ Intelligence", tag: "PYQ" },
-  { value: "internal_analysis", label: "Internal Analysis", tag: "IA" },
-  { value: "viva", label: "Viva", tag: "V" },
+const MODES: { value: Mode; label: string }[] = [
+  { value: "normal", label: "Normal" },
+  { value: "exam_tomorrow", label: "Exam Tomorrow" },
+  { value: "pyq_intelligence", label: "PYQ Intelligence" },
+  { value: "internal_analysis", label: "Internal Analysis" },
+  { value: "viva", label: "Viva" },
 ];
 
 export default function ChatInterface({ semester }: { semester: Semester }) {
-  const [subjectId, setSubjectId] = useState<string>("");
+  const subjects = SEMESTER_SUBJECTS[semester] ?? [];
+  const [subjectId, setSubjectId] = useState<string>(subjects[0] ?? "");
   const [mode, setMode] = useState<Mode>("normal");
   const [marks, setMarks] = useState<AnswerType>("10marks");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -49,6 +51,14 @@ export default function ChatInterface({ semester }: { semester: Semester }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Reset subject when semester changes
+  useEffect(() => {
+    const newSubjects = SEMESTER_SUBJECTS[semester] ?? [];
+    setSubjectId(newSubjects[0] ?? "");
+    setMessages([]);
+    resetSession();
+  }, [semester]);
+
   useEffect(() => {
     scrollRef.current?.scrollTo({
       top: scrollRef.current.scrollHeight,
@@ -56,10 +66,11 @@ export default function ChatInterface({ semester }: { semester: Semester }) {
     });
   }, [messages]);
 
+  const effectiveSubject = subjectId.trim() || "general";
+
   async function send() {
     const text = input.trim();
     if (!text || busy) return;
-    const effectiveSubject = subjectId.trim() || "general";
 
     const userMsg: ChatMessage = {
       role: "user",
@@ -117,7 +128,7 @@ export default function ChatInterface({ semester }: { semester: Semester }) {
 
   async function generatePdf() {
     if (!subjectId.trim()) {
-      toast.error("Type a subject name first");
+      toast.error("Select a subject first");
       return;
     }
     setGenerating(true);
@@ -140,18 +151,30 @@ export default function ChatInterface({ semester }: { semester: Semester }) {
           <div className="text-xs uppercase tracking-widest text-ink-300/70 mb-1">
             {SEMESTER_LABELS[semester]}
           </div>
-          <div className="font-display text-xl">Subject</div>
-          <input
-            type="text"
-            value={subjectId}
-            onChange={(e) => {
-              setSubjectId(e.target.value);
-              resetSession();
-              setMessages([]);
-            }}
-            placeholder="Type subject name (e.g. Operating Systems)"
-            className="mt-3 w-full rounded-xl bg-ink-900/80 border border-white/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
-          />
+          <div className="font-display text-xl mb-3">Subject</div>
+
+          {/* ---- DROPDOWN instead of text input ---- */}
+          <div className="relative">
+            <select
+              value={subjectId}
+              onChange={(e) => {
+                setSubjectId(e.target.value);
+                resetSession();
+                setMessages([]);
+              }}
+              className="w-full appearance-none rounded-xl bg-ink-900/80 border border-white/10 px-3 py-2.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 cursor-pointer"
+            >
+              {subjects.length === 0 && (
+                <option value="">No subjects listed</option>
+              )}
+              {subjects.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-300/60" />
+          </div>
 
           <Link
             href={`/syllabus/${semester}`}
