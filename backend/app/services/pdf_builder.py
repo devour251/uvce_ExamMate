@@ -2,6 +2,7 @@
 from __future__ import annotations
 import io
 import re
+from html import escape
 from datetime import datetime
 from pathlib import Path
 
@@ -29,7 +30,7 @@ def _markdown_to_flowables(md: str, styles):
             return
         text = " ".join(para).strip()
         if text:
-            flowables.append(Paragraph(text, styles["BodyText"]))
+            flowables.append(Paragraph(escape(text), styles["GuideBody"]))
         para.clear()
 
     for raw in lines:
@@ -40,25 +41,25 @@ def _markdown_to_flowables(md: str, styles):
             continue
         if line.startswith("# "):
             flush()
-            flowables.append(Paragraph(line[2:].strip(), styles["H1"]))
+            flowables.append(Paragraph(escape(line[2:].strip()), styles["H1"]))
             continue
         if line.startswith("## "):
             flush()
-            flowables.append(Paragraph(line[3:].strip(), styles["H2"]))
+            flowables.append(Paragraph(escape(line[3:].strip()), styles["H2"]))
             continue
         if line.startswith("### "):
             flush()
-            flowables.append(Paragraph(line[4:].strip(), styles["H3"]))
+            flowables.append(Paragraph(escape(line[4:].strip()), styles["H3"]))
             continue
         if re.match(r"^\s*[-*]\s+", line):
             flush()
             content = re.sub(r"^\s*[-*]\s+", "", line)
-            flowables.append(Paragraph("• " + content, styles["Bullet"]))
+            flowables.append(Paragraph("- " + escape(content), styles["GuideBullet"]))
             continue
         if re.match(r"^\s*\d+\.\s+", line):
             flush()
             content = re.sub(r"^\s*\d+\.\s+", "", line)
-            flowables.append(Paragraph(content, styles["Numbered"]))
+            flowables.append(Paragraph(escape(content), styles["GuideNumbered"]))
             continue
         para.append(line)
     flush()
@@ -114,47 +115,49 @@ def build_study_guide(
     )
     styles.add(
         ParagraphStyle(
-            "BodyText", parent=styles["BodyText"], fontSize=10.5, leading=14,
+            "GuideBody", parent=styles["BodyText"], fontSize=10.5, leading=14,
             textColor=colors.HexColor("#111827"), spaceAfter=6,
         )
     )
     styles.add(
         ParagraphStyle(
-            "Bullet", parent=styles["BodyText"], leftIndent=14, bulletIndent=4,
+            "GuideBullet", parent=styles["GuideBody"], leftIndent=14, bulletIndent=4,
         )
     )
     styles.add(
         ParagraphStyle(
-            "Numbered", parent=styles["BodyText"], leftIndent=14, bulletIndent=4,
+            "GuideNumbered", parent=styles["GuideBody"], leftIndent=14, bulletIndent=4,
         )
     )
 
     story = []
     # cover
     story.append(Paragraph("UVCE ExamMate AI", styles["Cover"]))
-    story.append(Paragraph(f"{subject_code} — {subject_name}", styles["H1"]))
+    story.append(Paragraph(escape(f"{subject_code} - {subject_name}"), styles["H1"]))
     story.append(Paragraph("Subject Preparation Guide", styles["H2"]))
     story.append(Paragraph(
         f"Generated on {datetime.now().strftime('%d %B %Y, %I:%M %p')}",
-        styles["BodyText"]
+        styles["GuideBody"]
     ))
     story.append(Spacer(1, 1 * cm))
     story.append(Paragraph(
         "This guide was auto-generated from your study session. "
         "It contains every question you asked and the AI's exam-oriented "
         "answer, plus a consolidated revision section at the end.",
-        styles["BodyText"]
+        styles["GuideBody"]
     ))
     story.append(PageBreak())
 
     # Q&A index
     story.append(Paragraph("Contents", styles["H1"]))
     table_data = [["#", "Question", "Mode", "Marks"]]
-    for i, m in enumerate(messages, start=1):
+    question_number = 1
+    for m in messages:
         if m["role"] != "user":
             continue
-        q = m["content"][:60] + ("…" if len(m["content"]) > 60 else "")
-        table_data.append([str(i), q, m.get("mode", "—"), m.get("marks", "—")])
+        q = m["content"][:60] + ("..." if len(m["content"]) > 60 else "")
+        table_data.append([str(question_number), q, m.get("mode", "-"), m.get("marks", "-")])
+        question_number += 1
     if len(table_data) > 1:
         t = Table(table_data, colWidths=[1 * cm, 11 * cm, 3 * cm, 2 * cm])
         t.setStyle(TableStyle([
@@ -176,10 +179,10 @@ def build_study_guide(
         elif m["role"] == "assistant" and pair:
             q = pair[0]
             story.append(Paragraph(
-                f"Q ({q.get('mode','—')} · {q.get('marks','—')}): {q['content']}",
+                escape(f"Q ({q.get('mode','-')} - {q.get('marks','-')}): {q['content']}"),
                 styles["H2"]
             ))
-            story.append(_markdown_to_flowables(m["content"], styles))
+            story.extend(_markdown_to_flowables(m["content"], styles))
             story.append(Spacer(1, 0.5 * cm))
             pair = []
 
@@ -188,14 +191,14 @@ def build_study_guide(
         story.append(PageBreak())
         story.append(Paragraph("Quick Revision", styles["H1"]))
         story.append(Paragraph(
-            "• Re-read each Q&A in this guide end-to-end once.\n"
-            "• Pay extra attention to 10/15/20-mark answers — these are "
+            "- Re-read each Q&A in this guide end-to-end once.<br/>"
+            "- Pay extra attention to 10/15/20-mark answers - these are "
             "  the most likely long-answer questions in the exam.\n"
-            "• Use the 'Exam Tomorrow' and 'PYQ Intelligence' modes in the "
+            "- Use the 'Exam Tomorrow' and 'PYQ Intelligence' modes in the "
             "  app to drill predicted questions again.\n"
-            "• For diagrams, refer to your uploaded UVCE notes (the app "
+            "- For diagrams, refer to your uploaded UVCE notes (the app "
             "  won't invent them).",
-            styles["BodyText"]
+            styles["GuideBody"]
         ))
 
     doc.build(story)

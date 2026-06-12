@@ -17,7 +17,7 @@ router = APIRouter()
 @router.post("/generate")
 def generate_pdf(req: GeneratePdfRequest):
     try:
-        messages = store.get(req.session_id)
+        messages = req.messages or store.get(req.session_id)
 
         if not messages:
             raise HTTPException(

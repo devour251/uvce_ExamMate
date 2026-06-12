@@ -50,13 +50,11 @@ async def ask(req: AskRequest):
         # --------------------------------------------------
         # 1. Embed query
         # --------------------------------------------------
+        q_emb = None
         try:
             q_emb = embed_query(req.question)
-        except Exception as e:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Embedding error: {str(e)}"
-            )
+        except Exception:
+            q_emb = None
 
         # --------------------------------------------------
         # 2. Retrieve context
@@ -66,30 +64,34 @@ async def ask(req: AskRequest):
             "subject_id": req.subject_id,
         }
 
-        try:
-            notes = rag_query(
-                query_embedding=q_emb,
-                where={**where, "type": "notes"},
-                n_results=4,
-            )
+        notes: list[dict] = []
+        pyqs: list[dict] = []
+        internals: list[dict] = []
 
-            pyqs = rag_query(
-                query_embedding=q_emb,
-                where={**where, "type": "pyq"},
-                n_results=3,
-            )
+        if q_emb is not None:
+            try:
+                notes = rag_query(
+                    query_embedding=q_emb,
+                    where={**where, "type": "notes"},
+                    n_results=4,
+                )
 
-            internals = rag_query(
-                query_embedding=q_emb,
-                where={**where, "type": "internal"},
-                n_results=2,
-            )
+                pyqs = rag_query(
+                    query_embedding=q_emb,
+                    where={**where, "type": "pyq"},
+                    n_results=3,
+                )
 
-        except Exception as e:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Vector search error: {str(e)}"
-            )
+                internals = rag_query(
+                    query_embedding=q_emb,
+                    where={**where, "type": "internal"},
+                    n_results=2,
+                )
+
+            except Exception:
+                notes = []
+                pyqs = []
+                internals = []
 
         hits = notes + pyqs + internals
 

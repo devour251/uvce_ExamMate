@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Upload, Loader2, CheckCircle2, AlertCircle, FileText } from "lucide-react";
 import { toast } from "sonner";
 import type { Semester } from "@/lib/api";
+import { SUBJECTS } from "@/lib/subjects";
 
 const API_BASE =
   typeof window !== "undefined"
@@ -124,7 +125,10 @@ export default function CommunityUpload() {
                 </label>
                 <select
                   value={semester}
-                  onChange={(e) => setSemester(Number(e.target.value) as Semester)}
+                  onChange={(e) => {
+                    setSemester(Number(e.target.value) as Semester);
+                    setSubjectId("");
+                  }}
                   className="w-full rounded-xl bg-ink-900/80 border border-white/10 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
                 >
                   {Array.from({ length: 8 }, (_, i) => i + 1).map((n) => (
@@ -153,18 +157,30 @@ export default function CommunityUpload() {
 
             <div>
               <label className="block text-xs uppercase tracking-widest text-ink-300/80 mb-2">
-                Subject Name
+                Subject
               </label>
-              <input
-                type="text"
+
+              <select
                 value={subjectId}
                 onChange={(e) => setSubjectId(e.target.value)}
-                placeholder="e.g. Operating Systems, DAA, MPMC, Cyber Security"
-                className="w-full rounded-xl bg-ink-900/80 border border-white/10 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
                 required
-              />
+                className="w-full rounded-xl bg-ink-900/80 border border-white/10 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
+
+              >
+                <option value="">Select Subject</option>
+
+                {(SUBJECTS[semester] || []).map((subject) => (
+                  <option
+                    key={subject.code}
+                    value={subject.code}
+                  >
+                    {subject.code} - {subject.name}
+                  </option>
+                ))}
+              </select>
+
               <p className="mt-1.5 text-[10px] text-ink-300/60">
-                Type any subject name — your college is autonomous so this is free-form.
+                Subjects are automatically filtered based on selected semester.
               </p>
             </div>
 

@@ -1,3 +1,5 @@
+from typing import cast
+
 from fastapi import APIRouter, Query
 from app.models.schemas import Subject, Semester
 
@@ -63,13 +65,13 @@ SUBJECT_CATALOG = {
 
 
 @router.get("/subjects", response_model=list[Subject])
-def list_subjects(semester: Semester = Query(...)):
+def list_subjects(semester: int = Query(..., ge=1, le=8)):
     return [
         Subject(
             id=code,
             code=code,
             name=name,
-            semester=semester,
+            semester=cast(Semester, semester),
         )
         for code, name in SUBJECT_CATALOG.get(semester, [])
     ]

@@ -2,6 +2,10 @@
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
+function absoluteApiUrl(url: string) {
+  return url.startsWith("http") ? url : `${BASE}${url}`;
+}
+
 async function request<T>(
   path: string,
   init: RequestInit = {},
@@ -76,6 +80,12 @@ export interface SessionState {
   messages: ChatMessage[];
 }
 
+export interface NoteFile {
+  name: string;
+  size_bytes: number;
+  download_url: string;
+}
+
 // ---------- ENDPOINTS ----------
 
 export const api = {
@@ -101,7 +111,32 @@ export const api = {
         body: JSON.stringify({ session_id, subject_id }),
       },
       token
-    ),
+    ).then((res) => ({ ...res, pdf_url: absoluteApiUrl(res.pdf_url) })),
+
+  generatePdfFromMessages: (
+    session_id: string,
+    subject_id: string,
+    messages: ChatMessage[],
+    token?: string
+  ) =>
+    request<{ pdf_url: string; filename: string }>(
+      "/api/pdf/generate",
+      {
+        method: "POST",
+        body: JSON.stringify({ session_id, subject_id, messages }),
+      },
+      token
+    ).then((res) => ({ ...res, pdf_url: absoluteApiUrl(res.pdf_url) })),
+
+  listNotes: (semester: Semester, subject_id: string) =>
+    request<{ files: NoteFile[] }>(
+      `/api/notes?semester=${semester}&subject_id=${encodeURIComponent(subject_id)}`
+    ).then((res) => ({
+      files: res.files.map((file) => ({
+        ...file,
+        download_url: absoluteApiUrl(file.download_url),
+      })),
+    })),
 
   uploadNotes: async (
     semester: Semester,

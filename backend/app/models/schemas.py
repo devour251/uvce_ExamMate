@@ -1,6 +1,6 @@
 """Pydantic models for the API."""
 from __future__ import annotations
-from typing import Literal
+from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 AnswerType = Literal["2marks", "5marks", "10marks", "15marks", "20marks"]
@@ -48,3 +48,4 @@ class AskResponse(BaseModel):
 class GeneratePdfRequest(BaseModel):
     session_id: str
     subject_id: str
+    messages: list[dict[str, Any]] | None = None

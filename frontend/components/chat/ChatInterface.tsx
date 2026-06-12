@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Send,
   FileDown,
+  FileText,
   Loader2,
   Sparkles,
   BookOpen,
@@ -13,9 +14,10 @@ import {
   Bot,
   AlertCircle,
   ChevronDown,
+  ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
-import { api, type AnswerType, type ChatMessage, type Mode, type Semester } from "@/lib/api";
+import { api, type AnswerType, type ChatMessage, type Mode, type NoteFile, type Semester } from "@/lib/api";
 import { getOrCreateSessionId, resetSession } from "@/lib/session";
 import { SEMESTER_LABELS, SEMESTER_SUBJECTS } from "@/lib/subjects";
 import ReactMarkdown from "react-markdown";
@@ -47,7 +49,9 @@ export default function ChatInterface({ semester }: { semester: Semester }) {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const sessionId = useMemo(() => getOrCreateSessionId(), []);
+  const [notes, setNotes] = useState<NoteFile[]>([]);
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [sessionId, setSessionId] = useState(() => getOrCreateSessionId());
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -57,6 +61,7 @@ export default function ChatInterface({ semester }: { semester: Semester }) {
     setSubjectId(newSubjects[0] ?? "");
     setMessages([]);
     resetSession();
+    setSessionId(getOrCreateSessionId());
   }, [semester]);
 
   useEffect(() => {
@@ -67,6 +72,27 @@ export default function ChatInterface({ semester }: { semester: Semester }) {
   }, [messages]);
 
   const effectiveSubject = subjectId.trim() || "general";
+
+  async function refreshNotes(nextSubject = effectiveSubject) {
+    if (!nextSubject.trim()) {
+      setNotes([]);
+      return;
+    }
+
+    setNotesLoading(true);
+    try {
+      const res = await api.listNotes(semester, nextSubject);
+      setNotes(res.files);
+    } catch {
+      setNotes([]);
+    } finally {
+      setNotesLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    refreshNotes();
+  }, [semester, subjectId]);
 
   async function send() {
     const text = input.trim();
@@ -121,6 +147,7 @@ export default function ChatInterface({ semester }: { semester: Semester }) {
       toast.info(`Indexing ${file.name} into ChromaDB…`);
       const res = await api.uploadNotes(semester, effectiveSubject, file);
       toast.success(`Indexed ${res.chunks} chunks from ${file.name}`);
+      refreshNotes();
     } catch {
       toast.success(`(Offline demo) Pretended to index ${file.name}`);
     }
@@ -131,13 +158,18 @@ export default function ChatInterface({ semester }: { semester: Semester }) {
       toast.error("Select a subject first");
       return;
     }
+    if (messages.length === 0) {
+      toast.error("Ask at least one question before generating a PDF");
+      return;
+    }
     setGenerating(true);
     try {
-      const res = await api.generatePdf(sessionId, subjectId);
+      const res = await api.generatePdfFromMessages(sessionId, subjectId, messages);
       toast.success("PDF ready — opening download…");
       window.open(res.pdf_url, "_blank");
-    } catch {
-      toast.success("(Offline demo) Would generate Subject_Preparation_Guide.pdf");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "PDF generation failed";
+      toast.error(msg);
     } finally {
       setGenerating(false);
     }
@@ -160,6 +192,7 @@ export default function ChatInterface({ semester }: { semester: Semester }) {
               onChange={(e) => {
                 setSubjectId(e.target.value);
                 resetSession();
+                setSessionId(getOrCreateSessionId());
                 setMessages([]);
               }}
               className="w-full appearance-none rounded-xl bg-ink-900/80 border border-white/10 px-3 py-2.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 cursor-pointer"
@@ -183,6 +216,45 @@ export default function ChatInterface({ semester }: { semester: Semester }) {
             <BookOpen className="h-4 w-4" />
             Open Syllabus
           </Link>
+        </div>
+
+        {/* Subject notes */}
+        <div className="glass rounded-2xl p-5">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div>
+              <div className="text-xs uppercase tracking-widest text-ink-300/70">
+                Subject Notes
+              </div>
+              <div className="font-display text-lg">View & download</div>
+            </div>
+            <FileText className="h-5 w-5 text-accent" />
+          </div>
+
+          {notesLoading ? (
+            <div className="flex items-center gap-2 text-xs text-ink-300/70">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Loading notes...
+            </div>
+          ) : notes.length > 0 ? (
+            <div className="space-y-2">
+              {notes.map((note) => (
+                <a
+                  key={note.name}
+                  href={note.download_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs hover:bg-white/[0.06] transition"
+                >
+                  <span className="truncate">{note.name}</span>
+                  <ExternalLink className="h-3.5 w-3.5 shrink-0 text-accent" />
+                </a>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-ink-300/70">
+              No notes uploaded for this subject yet. Upload a PDF below and it will appear here for everyone to view or download.
+            </p>
+          )}
         </div>
 
         {/* Mode selector */}
@@ -324,26 +396,6 @@ export default function ChatInterface({ semester }: { semester: Semester }) {
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {m.content}
                       </ReactMarkdown>
-
-                      {m.confidence && m.confidence.length > 0 && (
-                        <div className="mt-4 pt-3 border-t border-white/10">
-                          <div className="text-[10px] uppercase tracking-widest text-ink-300/70 mb-2">
-                            Predicted importance
-                          </div>
-                          {m.confidence.slice(0, 5).map((c) => (
-                            <div key={c.topic} className="flex items-center gap-2 text-xs mb-1">
-                              <span className="w-32 truncate">{c.topic}</span>
-                              <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
-                                <div
-                                  className="h-full bg-gradient-to-r from-accent to-crimson"
-                                  style={{ width: `${c.score}%` }}
-                                />
-                              </div>
-                              <span className="font-mono text-accent">{c.score}%</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
 
                       {m.sources && m.sources.length > 0 && (
                         <details className="mt-3">
