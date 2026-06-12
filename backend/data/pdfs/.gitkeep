@@ -1,0 +1,11 @@
+# Drop PDF files for each subject here:
+#
+#   data/pdfs/
+#     syllabus_sem1.pdf ... syllabus_sem8.pdf
+#     demo/
+#       BCS401_OS_Notes.pdf
+#       BCS401_PYQ_2022.pdf
+#       BCS401_Internal1.pdf
+#     sem4/BCS401/...   (user uploads land here)
+#
+# Then run:  python -m seed_data

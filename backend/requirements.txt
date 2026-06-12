@@ -1,0 +1,29 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pydantic==2.9.2
+pydantic-settings==2.5.2
+python-multipart==0.0.10
+python-dotenv==1.0.1
+
+# AI / RAG
+langchain==0.2.14
+langchain-google-genai==1.0.10
+langchain-community==0.2.12
+chromadb==0.5.5
+sentence-transformers==3.1.1
+
+# PDF
+pypdf==5.0.0
+reportlab==4.2.2
+
+# Auth / DB
+supabase>=2.10.0
+gotrue==2.10.0
+
+# Utils
+tenacity==8.5.0
+tiktoken==0.8.0
+
+# Add these to support new Supabase API key format
+httpx>=0.27
+gotrue>=2.10.0
