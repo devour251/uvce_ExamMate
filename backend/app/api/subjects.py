@@ -75,3 +75,15 @@ def list_subjects(semester: int = Query(..., ge=1, le=8)):
         )
         for code, name in SUBJECT_CATALOG.get(semester, [])
     ]
+
+
+def get_subject_name(subject_id: str) -> str:
+    """Look up a subject name by its code/id (e.g. BCS501 -> Computer Networks)."""
+    if not subject_id:
+        return "the subject"
+    for sem_subjects in SUBJECT_CATALOG.values():
+        for code, name in sem_subjects:
+            if code.lower() == subject_id.lower():
+                return name
+    return subject_id
+

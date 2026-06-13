@@ -48,14 +48,17 @@ def get_supabase() -> Client | None:
     global _supabase
     if _supabase is not None:
         return _supabase
-    if not settings.supabase_url or not settings.supabase_service_key:
+    url = settings.supabase_url
+    key = settings.supabase_service_key
+    if not url or not key or key.startswith("#") or "secret" in key.lower() or "your_" in key.lower() or "anon_key" in key.lower():
         return None
     try:
-        _supabase = create_client(settings.supabase_url, settings.supabase_service_key)
+        _supabase = create_client(url, key)
         return _supabase
     except Exception as e:
         log.error("supabase client init failed: %s", e)
         return None
+
 
 
 @router.post("/community/upload")

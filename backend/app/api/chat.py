@@ -11,6 +11,7 @@ from app.services.vector_store import query as rag_query
 from app.services.prompts import BASE_SYSTEM, build_prompt
 from app.services.llm import generate, extract_confidence
 from app.services.session_store import store
+from app.api.subjects import get_subject_name
 
 router = APIRouter()
 
@@ -102,12 +103,13 @@ async def ask(req: AskRequest):
         # --------------------------------------------------
         system = BASE_SYSTEM
 
+        subject_name = get_subject_name(req.subject_id)
         user_prompt = build_prompt(
             question=req.question,
             context=context,
             mode=req.mode,
             marks=req.marks,
-            subject=req.subject_id,
+            subject=subject_name,
         )
 
         # --------------------------------------------------

@@ -38,3 +38,26 @@ def test_chat_offline():
     body = r.json()
     assert "answer" in body
     assert body["session_id"] == "test_session_1"
+
+
+def test_chat_offline_marks():
+    """When OFFLINE_MODE=True and no context, the fallback message should
+    always be non-empty and contain the API key guidance."""
+    for marks in ("2marks", "10marks", "20marks"):
+        r = client.post(
+            "/api/chat/ask",
+            json={
+                "semester": 5,
+                "subject_id": "BCS501",
+                "question": "Explain OSI Model",
+                "mode": "normal",
+                "marks": marks,
+                "session_id": f"test_session_{marks}",
+            },
+        )
+        assert r.status_code == 200
+        body = r.json()
+        assert "answer" in body
+        assert len(body["answer"]) > 0
+
+

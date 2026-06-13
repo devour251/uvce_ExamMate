@@ -19,7 +19,7 @@ import {
 import Link from "next/link";
 import { api, type AnswerType, type ChatMessage, type Mode, type NoteFile, type Semester } from "@/lib/api";
 import { getOrCreateSessionId, resetSession } from "@/lib/session";
-import { SEMESTER_LABELS, SEMESTER_SUBJECTS } from "@/lib/subjects";
+import { SEMESTER_LABELS, SEMESTER_SUBJECTS, SUBJECTS } from "@/lib/subjects";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
@@ -41,8 +41,8 @@ const MODES: { value: Mode; label: string }[] = [
 ];
 
 export default function ChatInterface({ semester }: { semester: Semester }) {
-  const subjects = SEMESTER_SUBJECTS[semester] ?? [];
-  const [subjectId, setSubjectId] = useState<string>(subjects[0] ?? "");
+  const subjects = SUBJECTS[semester] ?? [];
+  const [subjectId, setSubjectId] = useState<string>(subjects[0]?.code ?? "");
   const [mode, setMode] = useState<Mode>("normal");
   const [marks, setMarks] = useState<AnswerType>("10marks");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -55,10 +55,13 @@ export default function ChatInterface({ semester }: { semester: Semester }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const currentSubject = subjects.find((s) => s.code === subjectId);
+  const subjectName = currentSubject ? currentSubject.name : (subjectId || "your subject");
+
   // Reset subject when semester changes
   useEffect(() => {
-    const newSubjects = SEMESTER_SUBJECTS[semester] ?? [];
-    setSubjectId(newSubjects[0] ?? "");
+    const newSubjects = SUBJECTS[semester] ?? [];
+    setSubjectId(newSubjects[0]?.code ?? "");
     setMessages([]);
     resetSession();
     setSessionId(getOrCreateSessionId());
@@ -201,8 +204,8 @@ export default function ChatInterface({ semester }: { semester: Semester }) {
                 <option value="">No subjects listed</option>
               )}
               {subjects.map((s) => (
-                <option key={s} value={s}>
-                  {s}
+                <option key={s.code} value={s.code}>
+                  {s.code} - {s.name}
                 </option>
               ))}
             </select>
@@ -359,7 +362,7 @@ export default function ChatInterface({ semester }: { semester: Semester }) {
               <div className="font-display text-2xl">
                 Ask anything about{" "}
                 <span className="gradient-text italic">
-                  {subjectId || "your subject"}
+                  {subjectName}
                 </span>
                 .
               </div>
@@ -451,7 +454,7 @@ export default function ChatInterface({ semester }: { semester: Semester }) {
                 }
               }}
               rows={1}
-              placeholder={`Ask about ${subjectId || "the subject"}…  (Shift+Enter for newline)`}
+              placeholder={`Ask about ${subjectName}…  (Shift+Enter for newline)`}
               className="flex-1 resize-none rounded-2xl bg-ink-900/80 border border-white/10 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 max-h-40"
             />
             <button
