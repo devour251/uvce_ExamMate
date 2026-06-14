@@ -1,0 +1,6 @@
+{
+  "name": "UVCE ExamMate AI",
+  "description": "An AI-powered exam preparation guide and RAG-based tutor for UVCE semesters.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
