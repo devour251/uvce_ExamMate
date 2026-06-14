@@ -10,15 +10,15 @@ UVCE ExamMate AI is a college-specific, AI-powered exam preparation platform bui
 
 ## ✨ Features
 
-| Feature | Description |
-|---|---|
-| 🧠 **AI Question Answering** | Get exam-oriented answers powered by Gemini + RAG over UVCE notes |
-| ⏰ **Exam Tomorrow Mode** | One-click important topics, definitions, and last-minute revision |
-| 📊 **PYQ Intelligence** | Predicts important questions using PYQs + syllabus + AI reasoning |
-| 📄 **Internal Paper Analysis** | Detects repeated concepts and exam trends from internal papers |
-| 📚 **PDF Study Guide** | Auto-generates a downloadable `Subject_Preparation_Guide.pdf` |
-| 🎤 **Viva Mode** | Quick Q&A pairs for viva preparation |
-| 🧾 **Smart Revision Notes** | Structured revision notes from the entire chat session |
+| Feature                        | Description                                                       |
+| ------------------------------ | ----------------------------------------------------------------- |
+| 🧠 **AI Question Answering**   | Get exam-oriented answers powered by Gemini + RAG over UVCE notes |
+| ⏰ **Exam Tomorrow Mode**       | One-click important topics, definitions, and last-minute revision |
+| 📊 **PYQ Intelligence**        | Predicts important questions using PYQs + syllabus + AI reasoning |
+| 📄 **Internal Paper Analysis** | Detects repeated concepts and exam trends from internal papers    |
+| 📚 **PDF Study Guide**         | Auto-generates a downloadable `Subject_Preparation_Guide.pdf`     |
+| 🎤 **Viva Mode**               | Quick Q&A pairs for viva preparation                              |
+| 🧾 **Smart Revision Notes**    | Structured revision notes from the entire chat session            |
 
 ---
 
@@ -36,7 +36,7 @@ UVCE ExamMate AI is a college-specific, AI-powered exam preparation platform bui
 
 ## 🏗️ Project Structure
 
-```
+```text
 uvce-exammate-ai/
 ├── frontend/         # Next.js app
 ├── backend/          # FastAPI app
@@ -44,13 +44,14 @@ uvce-exammate-ai/
 └── README.md
 ```
 
-See [`docs/`](./docs) for the full system design.
+See `docs/` for the full system design.
 
 ---
 
 ## 🚀 Quick Start
 
 ### Frontend
+
 ```bash
 cd frontend
 npm install
@@ -58,6 +59,7 @@ npm run dev          # http://localhost:3000
 ```
 
 ### Backend
+
 ```bash
 cd backend
 python -m venv venv && source venv/bin/activate
@@ -66,40 +68,30 @@ uvicorn app.main:app --reload --port 8000
 ```
 
 ### Environment Variables
+
 Copy `.env.example` to `.env` in both `frontend/` and `backend/` and fill in keys.
 
 ---
 
 ## 📚 Documentation
 
-- [01 — System Architecture](./docs/01-system-architecture.md)
-- [02 — Database Schema (Supabase)](./docs/02-database-schema.md)
-- [03 — ChromaDB Structure](./docs/03-chromadb-structure.md)
-- [04 — Folder Structure](./docs/04-folder-structure.md)
-- [05 — API Design](./docs/05-api-design.md)
-- [06 — UI Wireframes](./docs/06-ui-wireframes.md)
-- [07 — User Flow Diagrams](./docs/07-user-flow.md)
-- [08 — Authentication Flow](./docs/08-authentication-flow.md)
-- [09 — RAG Architecture](./docs/09-rag-architecture.md)
-- [10 — Gemini Prompt Engineering](./docs/10-prompt-engineering.md)
-- [11 — Frontend Components](./docs/11-frontend-components.md)
-- [12 — Backend Services](./docs/12-backend-services.md)
-- [13 — Development Plan](./docs/13-development-plan.md)
-- [14 — 30-Hour Timeline & Team Roles](./docs/14-30h-timeline.md)
-- [15 — MVP vs Nice-to-Have](./docs/15-mvp-features.md)
-- [16 — UI Design Recommendations](./docs/16-ui-design.md)
-- [17 — Challenges & Solutions](./docs/17-challenges.md)
-
----
-
-## 👥 Team
-
-| Role | Member | Responsibility |
-|---|---|---|
-| Frontend Lead | TBD | Landing page, chat UI, animations |
-| Backend Lead | TBD | FastAPI, RAG, Gemini integration |
-| AI/RAG Lead | TBD | ChromaDB, LangChain, prompt design |
-| Design + Auth | TBD | UI polish, Supabase auth, deployment |
+* 01 — System Architecture
+* 02 — Database Schema (Supabase)
+* 03 — ChromaDB Structure
+* 04 — Folder Structure
+* 05 — API Design
+* 06 — UI Wireframes
+* 07 — User Flow Diagrams
+* 08 — Authentication Flow
+* 09 — RAG Architecture
+* 10 — Gemini Prompt Engineering
+* 11 — Frontend Components
+* 12 — Backend Services
+* 13 — Development Plan
+* 14 — 30-Hour Timeline & Team Roles
+* 15 — MVP vs Nice-to-Have
+* 16 — UI Design Recommendations
+* 17 — Challenges & Solutions
 
 ---
 
